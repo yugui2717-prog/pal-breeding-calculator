@@ -204,6 +204,26 @@
   .msg-item .m-time { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
   .msg-item .m-body { color: var(--text); word-break: break-all; white-space: pre-wrap; }
   .msg-empty { color: var(--text-dim); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  /* 留言板连接状态条：位于标题下方，提示云端在线/降级本地 */
+  .msg-status {
+    margin: 8px 0 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text-dim);
+    transition: border-color .2s, background .2s, color .2s;
+  }
+  /* 云端在线：绿色提示 */
+  .msg-status.online {
+    border-color: rgba(79,210,140,.5); background: rgba(79,210,140,.10); color: #6ee7a8;
+  }
+  /* 降级本地：橙黄色醒目提示 */
+  .msg-status.offline {
+    border-color: rgba(255,180,60,.55); background: rgba(255,180,60,.10); color: #ffb43c;
+  }
+  /* 本地留言条目上的"本地模式"小标签 */
+  .local-tag {
+    display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 5px;
+    margin-left: 6px; background: rgba(255,180,60,.18); color: #ffb43c;
+    border: 1px solid rgba(255,180,60,.4); vertical-align: middle;
+  }
   @media (max-width: 480px) { .msg-form .msg-row { grid-template-columns: 1fr; } .msg-form .msg-row .btn { width: 100%; } }
 </style>
 </head>
@@ -258,6 +278,8 @@
   <section class="card msg">
     <h2><span class="dot"></span>玩家留言板</h2>
     <p class="sub">分享你的配种心得，留言保存在服务器，刷新页面仍可见</p>
+    <!-- 留言板连接状态条：云端在线显示绿色，降级本地显示橙色 -->
+    <div class="msg-status" id="msgStatus">正在连接留言服务器…</div>
     <div class="msg-form">
       <textarea id="msgContent" placeholder="写下你的留言……（必填）"></textarea>
       <div class="msg-row">
@@ -2084,11 +2106,17 @@ document.getElementById("clearHisBtn").addEventListener("click", function () {
 renderHistory();
 
 /* =====================================================================
- * 留言板模块（与后端 http://127.0.0.1:8000 交互）
- *   GET  /messages  -> 读取留言列表
- *   POST /messages  -> 提交新留言（JSON: {name, content}）
+ * 留言板模块（云端优先 + 本地降级）
+ *   云端：MSG_API（Cloudflare Worker）
+ *     GET  /messages  -> 读取留言列表
+ *     POST /messages  -> 提交新留言（JSON: {name, text}）
+ *   降级：云端不可达（报错/超时/网络不可达）时自动改用 localStorage
+ *     键名：pal_local_messages；每条本地留言标记 source="local"
  * ===================================================================== */
 var MSG_API = "https://proud-band-868bpal-backend.yugui2717.workers.dev";
+var LOCAL_MSG_KEY = "pal_local_messages";   // 本地留言存储键名
+var CLOUD_TIMEOUT_MS = 6000;                // 云端请求超时阈值（ms）
+var msgCloudOnline = false;                 // 云端当前是否在线
 
 // HTML 转义，避免留言内容导致注入
 function escapeHtml(s) {
@@ -2107,6 +2135,34 @@ function fmtMsgTime(t) {
     " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
 }
 
+// 设置留言板状态条：state 取值 ""（加载中灰） | "online"（绿） | "offline"（橙）
+function setMsgStatus(state, text) {
+  var el = document.getElementById("msgStatus");
+  if (!el) return;
+  el.className = "msg-status" + (state ? " " + state : "");
+  el.textContent = text || "";
+}
+
+// 读取本地留言列表
+function readLocalMessages() {
+  try {
+    var raw = localStorage.getItem(LOCAL_MSG_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// 写入本地留言列表
+function writeLocalMessages(list) {
+  try {
+    localStorage.setItem(LOCAL_MSG_KEY, JSON.stringify(list));
+  } catch (e) {
+    // localStorage 写入失败时静默处理（隐私模式等场景）
+  }
+}
+
 // 渲染留言列表到页面
 function renderMessages(list) {
   var box = document.getElementById("msgList");
@@ -2122,12 +2178,15 @@ function renderMessages(list) {
     var time = m.time || m.created_at || m.createdAt || m.timestamp || "";
     // 读取置顶字段，兼容不同命名
     var isPinned = !!(m.isPinned || m.is_pinned || m.pinned);
+    // 判断是否本地模式留言（source 字段标识来源）
+    var isLocal = !!(m.source === "local" || m.local);
     if (!String(name).trim()) name = "匿名玩家";
     // 置顶留言添加 pinned class 和置顶标签
     var itemCls = "msg-item" + (isPinned ? " pinned" : "");
     var pinTag = isPinned ? '<span class="pin-tag">置顶</span>' : "";
+    var localTag = isLocal ? '<span class="local-tag">本地模式</span>' : "";
     html += '<div class="' + itemCls + '">' +
-      '<div class="m-head"><span class="m-name">' + pinTag + escapeHtml(name) +
+      '<div class="m-head"><span class="m-name">' + pinTag + escapeHtml(name) + localTag +
       '</span><span class="m-time">' + escapeHtml(fmtMsgTime(time)) + '</span></div>' +
       '<div class="m-body">' + escapeHtml(content) + '</div>' +
       '</div>';
@@ -2142,9 +2201,35 @@ function showMsgTip(text, type) {
   tip.className = "msg-tip" + (type ? " " + type : "");
 }
 
-// 从后端拉取留言
+// 带超时的 fetch 封装：超时/网络错误统一抛错，便于上层降级到本地
+function fetchWithTimeout(url, options, timeoutMs) {
+  options = options || {};
+  // 优先用 AbortController 实现超时
+  if (typeof AbortController === "function") {
+    var ctrl = new AbortController();
+    options.signal = ctrl.signal;
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    return new Promise(function (resolve, reject) {
+      fetch(url, options).then(
+        function (v) { clearTimeout(timer); resolve(v); },
+        function (e) { clearTimeout(timer); reject(e); }
+      );
+    });
+  }
+  // 降级方案：Promise.race 实现超时
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () { reject(new Error("请求超时")); }, timeoutMs);
+    fetch(url, options).then(
+      function (v) { clearTimeout(timer); resolve(v); },
+      function (e) { clearTimeout(timer); reject(e); }
+    );
+  });
+}
+
+// 拉取留言：先试云端，失败则降级读 localStorage
 function loadMessages() {
-  fetch(MSG_API + "/messages", { method: "GET" })
+  setMsgStatus("", "正在连接留言服务器…");
+  fetchWithTimeout(MSG_API + "/messages", { method: "GET" }, CLOUD_TIMEOUT_MS)
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
@@ -2152,15 +2237,19 @@ function loadMessages() {
     .then(function (data) {
       // 兼容后端返回数组 或 {messages:[...]} 两种结构
       var list = Array.isArray(data) ? data : (data && data.messages) || [];
+      msgCloudOnline = true;
+      setMsgStatus("online", "云端留言板在线");
       renderMessages(list);
     })
-    .catch(function (err) {
-      showMsgTip("加载留言失败：" + err.message + "（请确认后端已启动）", "err");
-      renderMessages([]);
+    .catch(function () {
+      // 云端不可达（报错/超时/网络不可达）：降级为本地模式
+      msgCloudOnline = false;
+      setMsgStatus("offline", "留言区板块国内网络不可用，当前为本地模式");
+      renderMessages(readLocalMessages());
     });
 }
 
-// 提交留言
+// 提交留言：先试云端，失败则保存到 localStorage
 document.getElementById("msgSubmit").addEventListener("click", function () {
   var contentEl = document.getElementById("msgContent");
   var nameEl = document.getElementById("msgName");
@@ -2173,11 +2262,11 @@ document.getElementById("msgSubmit").addEventListener("click", function () {
     return;
   }
   showMsgTip("正在提交……", "");
-  fetch(MSG_API + "/messages", {
+  fetchWithTimeout(MSG_API + "/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: name, text: content })
-  })
+  }, CLOUD_TIMEOUT_MS)
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
@@ -2188,8 +2277,21 @@ document.getElementById("msgSubmit").addEventListener("click", function () {
       showMsgTip("留言提交成功！", "ok");
       loadMessages();
     })
-    .catch(function (err) {
-      showMsgTip("提交失败：" + err.message + "（请确认后端已启动）", "err");
+    .catch(function () {
+      // 云端不可达：降级保存到 localStorage
+      var list = readLocalMessages();
+      list.unshift({
+        name: name,
+        text: content,
+        time: Date.now(),
+        source: "local"   // 标记来源为本地模式
+      });
+      writeLocalMessages(list);
+      msgCloudOnline = false;
+      setMsgStatus("offline", "留言区板块国内网络不可用，当前为本地模式");
+      contentEl.value = "";
+      showMsgTip("云端不可用，留言已保存到本地（本地模式）", "ok");
+      renderMessages(readLocalMessages());
     });
 });
 

@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>幻兽帕鲁配种计算器 v1.1（变异配种）</title>
+<style>
+  /* ========== 样式区：全局 ========== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-1: #0f1029;
+    --bg-2: #1a1b3a;
+    --card: #1e2042;
+    --card-2: #25274f;
+    --line: #3a3d6e;
+    --text: #e8eaf6;
+    --text-dim: #9ea1c8;
+    --orange: #ff7a45;   /* 正向色 */
+    --blue: #36c9ff;     /* 反向色 */
+    --purple: #b66bff;   /* 变异色 */
+    --green: #5dd39e;
+    --gold: #ffd24a;
+    --danger: #ff5470;
+  }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(54,201,255,.12), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(182,107,255,.14), transparent 60%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    min-height: 100vh;
+    line-height: 1.6;
+    padding: 24px 16px 60px;
+  }
+
+  /* ========== 头部 ========== */
+  header { text-align: center; margin: 10px auto 28px; max-width: 1100px; }
+  header h1 {
+    font-size: 30px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--orange), var(--gold), var(--blue));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 24px rgba(255,210,74,.18);
+  }
+  header p { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+
+  /* ========== 布局 ========== */
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) { .row { grid-template-columns: 1fr; } header h1 { font-size: 24px; } }
+
+  /* ========== 卡片 ========== */
+  .card {
+    background: linear-gradient(180deg, var(--card), var(--card-2));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent, var(--line));
+  }
+  .card.fwd { --accent: var(--orange); }
+  .card.rev { --accent: var(--blue); }
+  .card.his { --accent: var(--purple); }
+  .card h2 { font-size: 18px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .card .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+
+  /* ========== 表单 ========== */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  select {
+    width: 100%; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: #15162e; color: var(--text);
+    font-size: 15px; cursor: pointer; outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,255,255,.06); }
+  optgroup { color: var(--text-dim); font-style: normal; }
+  option { color: var(--text); }
+
+  .btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: bold; color: #1a1b3a; cursor: pointer;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #fff));
+    box-shadow: 0 6px 18px rgba(0,0,0,.3);
+    transition: transform .08s, filter .2s;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--line); box-shadow: none; }
+
+  /* ========== 结果区 ========== */
+  .result { margin-top: 14px; min-height: 60px; }
+  .result .empty { color: var(--text-dim); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  .result .warn { color: var(--gold); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--gold); border-radius: 10px; background: rgba(255,210,74,.06); }
+
+  .pal-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,122,69,.10); border: 1px solid var(--orange);
+    border-radius: 10px; padding: 10px 14px; margin: 6px 6px 0 0;
+  }
+  .pal-chip .name { font-weight: bold; }
+  .pal-chip .pw { color: var(--gold); font-size: 13px; }
+  /* 变异后代 chip：紫色边框 */
+  .pal-chip.mut {
+    background: rgba(182,107,255,.12); border-color: var(--purple);
+    box-shadow: 0 0 12px rgba(182,107,255,.25);
+  }
+  .pal-chip.mut .pw { color: var(--purple); }
+
+  .badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    background: var(--purple); color: #1a1b3a; font-weight: bold; margin-left: 6px;
+  }
+
+  .avg-info { color: var(--text-dim); font-size: 13px; margin-top: 10px; }
+
+  .mut-hit {
+    margin-top: 8px; padding: 10px 12px; border: 1px solid var(--purple);
+    border-radius: 10px; background: rgba(182,107,255,.08);
+  }
+  .mut-hit .title { color: var(--purple); font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+
+  /* 反向结果：分区与组合列表 */
+  .section-title { font-size: 14px; margin: 14px 0 6px; display: flex; align-items: center; gap: 8px; }
+  .section-title .cnt { color: var(--gold); font-weight: bold; }
+  .combo-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow: auto; padding-right: 4px; }
+  .combo {
+    display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 10px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+    font-size: 14px;
+  }
+  .combo.mut { border-color: var(--purple); background: rgba(182,107,255,.07); }
+  .combo .p { font-weight: bold; }
+  .combo .x { color: var(--text-dim); }
+  .combo .pw { color: var(--gold); font-size: 12px; text-align: right; }
+  @media (max-width: 480px) { .combo { grid-template-columns: 1fr; gap: 4px; } .combo .x { display: none; } }
+
+  /* ========== 历史 ========== */
+  .his-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .his-head h2 { margin: 0; }
+  .his-list { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow: auto; }
+  .his-item {
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 12px; font-size: 13px;
+  }
+  .his-item .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 6px; margin-right: 6px; font-weight: bold; color: #1a1b3a; }
+  .his-item .tag.fwd { background: var(--orange); }
+  .his-item .tag.rev { background: var(--blue); }
+  .his-item .tag.mut { background: var(--purple); }
+  .his-item .time { color: var(--text-dim); float: right; font-size: 11px; }
+  .his-item .res { color: var(--gold); }
+
+  /* 滚动条美化 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ========== 留言板 ========== */
+  .card.msg { --accent: var(--green); }
+  .msg-form { display: grid; gap: 10px; }
+  .msg-form textarea {
+    width: 100%; min-height: 72px; resize: vertical; padding: 11px 12px;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: #15162e; color: var(--text); font-size: 14px; line-height: 1.6;
+    font-family: inherit; outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .msg-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,255,255,.06); }
+  .msg-form .msg-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; }
+  .msg-form input {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: #15162e; color: var(--text); font-size: 14px; outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .msg-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,255,255,.06); }
+  .msg-tip { color: var(--text-dim); font-size: 12px; min-height: 16px; }
+  .msg-tip.err { color: var(--danger); }
+  .msg-tip.ok { color: var(--green); }
+  .msg-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; max-height: 460px; overflow: auto; padding-right: 4px; }
+  .msg-item {
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font-size: 13px;
+  }
+  /* 置顶留言：金色边框 + 发光背景 */
+  .msg-item.pinned {
+    border-color: var(--gold);
+    background: rgba(255,210,74,.08);
+    box-shadow: 0 0 12px rgba(255,210,74,.18);
+  }
+  .msg-item.pinned .m-name { color: var(--gold); }
+  /* 置顶标签 */
+  .pin-tag {
+    display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 6px;
+    background: var(--gold); color: #1a1b3a; font-weight: bold; margin-right: 6px;
+  }
+  .msg-item .m-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .msg-item .m-name { color: var(--green); font-weight: bold; word-break: break-all; }
+  .msg-item .m-time { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+  .msg-item .m-body { color: var(--text); word-break: break-all; white-space: pre-wrap; }
+  .msg-empty { color: var(--text-dim); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+  @media (max-width: 480px) { .msg-form .msg-row { grid-template-columns: 1fr; } .msg-form .msg-row .btn { width: 100%; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>幻兽帕鲁 配种计算器 v1.1</h1>
+  <p>支持变异配种 ｜ 正向：爸爸+妈妈→后代 ｜ 反向：目标帕鲁→父母组合（普通+变异）</p>
+</header>
+
+<main>
+  <div class="row">
+    <!-- ========== 正向查询 ========== -->
+    <section class="card fwd">
+      <h2><span class="dot"></span>正向配种查询</h2>
+      <p class="sub">选择爸爸与妈妈。若命中变异规则则直接显示变异后代，否则用平均值算法</p>
+      <div class="field">
+        <label>爸爸帕鲁</label>
+        <select id="fwdDad"></select>
+      </div>
+      <div class="field">
+        <label>妈妈帕鲁</label>
+        <select id="fwdMom"></select>
+      </div>
+      <button class="btn" id="fwdBtn">查询后代</button>
+      <div class="result" id="fwdResult"><div class="empty">请选择父母后点击查询</div></div>
+    </section>
+
+    <!-- ========== 反向查询 ========== -->
+    <section class="card rev">
+      <h2><span class="dot"></span>反向配种查询</h2>
+      <p class="sub">选择目标帕鲁，分别列出"变异配种组合"与"普通平均值组合"</p>
+      <div class="field">
+        <label>目标帕鲁（想要配出的后代）</label>
+        <select id="revTarget"></select>
+      </div>
+      <button class="btn" id="revBtn">查询父母组合</button>
+      <div class="result" id="revResult"><div class="empty">请选择目标后点击查询</div></div>
+    </section>
+  </div>
+
+  <!-- ========== 历史记录 ========== -->
+  <section class="card his">
+    <div class="his-head">
+      <h2><span class="dot"></span>查询历史（本地保存，刷新不丢失）</h2>
+      <button class="btn ghost" id="clearHisBtn" style="width:auto; padding:8px 14px; font-size:13px;">清空历史</button>
+    </div>
+    <div class="his-list" id="hisList"></div>
+  </section>
+
+  <!-- ========== 留言板 ========== -->
+  <section class="card msg">
+    <h2><span class="dot"></span>玩家留言板</h2>
+    <p class="sub">分享你的配种心得，留言保存在服务器，刷新页面仍可见</p>
+    <div class="msg-form">
+      <textarea id="msgContent" placeholder="写下你的留言……（必填）"></textarea>
+      <div class="msg-row">
+        <input id="msgName" type="text" placeholder="玩家名（可选，留空显示匿名玩家）">
+        <button class="btn" id="msgSubmit" style="width:auto; padding:12px 22px;">提交留言</button>
+      </div>
+      <div class="msg-tip" id="msgTip"></div>
+    </div>
+    <div class="msg-list" id="msgList"></div>
+  </section>
+</main>
+
+<script>
+/* =====================================================================
+ * 数据区
+ * ===================================================================== */
+
+/* ---- 基础帕鲁数据（含配种力量值）---- */
+const PALS = [
+  {name:"棉悠悠", code:"SheepBall", power:3050},
+  {name:"捣蛋猫", code:"PinkCat", power:2760},
+  {name:"皮皮鸡", code:"ChickenPal", power:3080},
+  {name:"翠叶鼠", code:"Carbunclo", power:3020},
+  {name:"火绒狐", code:"BluePlatypus", power:2980},
+  {name:"冲浪鸭", code:"CuteFox", power:3060},
+  {name:"伏特喵", code:"FlyingManta", power:2740},
+  {name:"新叶猿", code:"WoolFox", power:2890},
+  {name:"燎火鹿", code:"KendoFrog", power:2600},
+  {name:"企丸丸", code:"LeafMomonga", power:2630},
+  {name:"企丸王", code:"Ganesha", power:3070},
+  {name:"电棘鼠", code:"PlantSlime", power:2950},
+  {name:"叶泥泥", code:"SamuraiDog", power:2930},
+  {name:"玉藻狐", code:"CloverFairy", power:2970},
+  {name:"啼卡尔", code:"Hedgehog", power:3030},
+  {name:"壶小象", code:"NegativeKoala", power:3000},
+  {name:"瞅什魔", code:"Penguin", power:2960},
+  {name:"米露菲", code:"CaptainPenguin", power:2070},
+  {name:"寐魔", code:"WizardOwl", power:2940},
+  {name:"草莽猪", code:"Alpaca", power:2720},
+  {name:"露娜蒂", code:"KingAlpaca", power:2220},
+  {name:"遁地鼠", code:"DreamDemon", power:2910},
+  {name:"勾魂鱿", code:"Monkey", power:2900},
+  {name:"喵丝特", code:"NightFox", power:2920},
+  {name:"鲁米儿", code:"LavaGirl", power:2700},
+  {name:"猎狼", code:"FlameBambi", power:2870},
+  {name:"炸蛋鸟", code:"Bastet", power:3040},
+  {name:"波娜兔", code:"Boar", power:2880},
+  {name:"波霸牛", code:"Kitsunebi", power:2990},
+  {name:"荆棘魔仙", code:"NegativeOctopus", power:2770},
+  {name:"鲨小子", code:"CuteMole", power:2790},
+  {name:"吊缚灵", code:"Deer", power:2710},
+  {name:"叶胖达", code:"Garm", power:2680},
+  {name:"棉花糖", code:"BerryGoat", power:2610},
+  {name:"灌木羊", code:"MopBaby", power:2840},
+  {name:"美露帕", code:"MopKing", power:2150},
+  {name:"紫霞鹿", code:"TentacleTurtle", power:2410},
+  {name:"疾风隼", code:"WindChimes", power:2780},
+  {name:"姬小兔", code:"SweetsSheep", power:2820},
+  {name:"炎魔羊", code:"CowPal", power:2800},
+  {name:"幻悦蝶", code:"BlueDragon", power:1830},
+  {name:"炽焰牛", code:"ElecCat", power:3010},
+  {name:"趴趴鲶", code:"Kelpie", power:2810},
+  {name:"黑鸦隐士", code:"PinkRabbit", power:2860},
+  {name:"庞克蜥", code:"JellyfishFairy", power:2650},
+  {name:"月镰魔", code:"JellyfishGhost", power:2590},
+  {name:"天擒鸟", code:"ClioneTwins", power:2520},
+  {name:"羽箭射手", code:"OctopusGirl", power:2530},
+  {name:"铁拳猿", code:"Eagle", power:2570},
+  {name:"骑士蜂", code:"GhostBlackCat", power:2250},
+  {name:"女皇蜂", code:"HawkBird", power:2560},
+  {name:"笑魇猫", code:"CatBat", power:2340},
+  {name:"毛掸儿", code:"ColorfulBird", power:2730},
+  {name:"毛老爹", code:"Kirin", power:2270},
+  {name:"疾旋鼬", code:"SharkKid", power:2550},
+  {name:"雷角马", code:"Werewolf", power:2110},
+  {name:"吹雪狐", code:"DarkCrow", power:2370},
+  {name:"火麒麟", code:"FlameBuffalo", power:2320},
+  {name:"严冬鹿", code:"FluffyBird", power:2480},
+  {name:"霹雳犬", code:"LittleBriarRose", power:2690},
+  {name:"苍焰狼", code:"CuteButterfly", power:2620},
+  {name:"雷鸣童子", code:"ElecPomeranian", power:2360},
+  {name:"秘斯媞雅", code:"FairyDragon", power:2280},
+  {name:"花冠龙", code:"BirdDragon", power:1650},
+  {name:"滑水蛇", code:"CatVampire", power:1570},
+  {name:"噬魂兽", code:"VioletFairy", power:1480},
+  {name:"碎岩龟", code:"SoldierBee", power:2350},
+  {name:"猫蝠怪", code:"QueenBee", power:1790},
+  {name:"博爱蜥", code:"PinkLizard", power:2090},
+  {name:"融焰娘", code:"NaughtyCat", power:2120},
+  {name:"烽歌龙", code:"PurpleSpider", power:1730},
+  {name:"浪刃武士", code:"IceSeal", power:1660},
+  {name:"迅雷鸟", code:"LizardMan", power:2670},
+  {name:"燧火鸟", code:"Gorilla", power:2140},
+  {name:"暗巫猫", code:"Serpent", power:2440},
+  {name:"焰巫狐", code:"RobinHood", power:2260},
+  {name:"踏春兔", code:"FlowerRabbit", power:2660},
+  {name:"薇莉塔", code:"FoxMage", power:2080},
+  {name:"绸笠蛾", code:"CatMage", power:2040},
+  {name:"精灵龙", code:"HadesBird", power:1130},
+  {name:"水灵儿", code:"GrassMinotaur", power:2020},
+  {name:"碧海龙", code:"Mutant", power:2010},
+  {name:"冰棘兽", code:"FengyunDeeper", power:1960},
+  {name:"狱焰王", code:"FlowerDinosaur", power:2100},
+  {name:"佩克龙", code:"Ronin", power:1560},
+  {name:"连理龙", code:"IceCrocodile", power:2130},
+  {name:"花丽娜", code:"GrassMammoth", power:1340},
+  {name:"熔岩兽", code:"StuffedShark", power:2450},
+  {name:"君王美露帕", code:"FlowerDoll", power:1720},
+  {name:"森猛犸", code:"PandaGirl", power:1410},
+  {name:"白绒雪怪", code:"Baphomet", power:1470},
+  {name:"铠格力斯", code:"RaijinDaughter", power:2400},
+  {name:"云海鹿", code:"FireKirin", power:1980},
+  {name:"夜幕魔蝠", code:"LazyDragon", power:1090},
+  {name:"天羽龙", code:"IceFox", power:1970},
+  {name:"焰煌", code:"ThunderBird", power:1690},
+  {name:"雷冥鸟", code:"GhostAnglerfish", power:880},
+  {name:"魔渊龙", code:"ThunderDog", power:1920},
+  {name:"冥铠蝎", code:"DarkScorpion", power:1120},
+  {name:"阿努比斯", code:"CactusDoll", power:2420},
+  {name:"覆海龙", code:"IceDeer", power:1930},
+  {name:"朱雀", code:"GrassPanda", power:2060},
+  {name:"暴电熊", code:"WeaselDragon", power:2330},
+  {name:"百合女王", code:"RedArmorBird", power:1050},
+  {name:"荷鲁斯", code:"VolcanoDragon", power:750},
+  {name:"波鲁杰克斯", code:"TropicalOstrich", power:1240},
+  {name:"异构格里芬", code:"DrillGame", power:1550},
+  {name:"圣光骑士", code:"SakuraSaurus", power:1380},
+  {name:"混沌骑士", code:"LazyCatfish", power:2290},
+  {name:"唤冬兽", code:"Plesiosaur", power:1030},
+  {name:"空涡龙", code:"AmaterasuWolf", power:1670}
+];
+
+/* ---- 变异配种规则（固定规则，优先级高于平均值算法）----
+ * 字段：p1/p2=父母名，g1/g2=性别(WILDCARD/MALE/FEMALE)，child=变异后代
+ * 本界面无性别输入，匹配时按名称匹配且忽略父母顺序、忽略性别；
+ * 若同一父母组合命中多条规则（如暗巫猫+焰巫狐），返回全部后代。
+ */
+const MUTATIONS = [
+{"p1": "妮瞅莎", "g1": "WILDCARD", "p2": "苍焰狼", "g2": "WILDCARD", "child": "幽焰狼"},
+{"p1": "噬魂兽", "g1": "WILDCARD", "p2": "炎魔羊", "g2": "WILDCARD", "child": "暗魔羊"},
+{"p1": "喵丝特", "g1": "WILDCARD", "p2": "企丸丸", "g2": "WILDCARD", "child": "冰丝特"},
+{"p1": "桃蛛娘", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "郁木羊"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "烽歌龙", "g2": "WILDCARD", "child": "霜歌龙"},
+{"p1": "墨丸", "g1": "WILDCARD", "p2": "肚肚鳄", "g2": "WILDCARD", "child": "冬丸"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "碧月龙"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "冲浪鸭", "g2": "WILDCARD", "child": "热浪鸭"},
+{"p1": "梅莉姆", "g1": "WILDCARD", "p2": "球抱苞", "g2": "WILDCARD", "child": "妖抱苞"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "企丸王", "g2": "WILDCARD", "child": "闪丸王"},
+{"p1": "暗巫猫", "g1": "FEMALE", "p2": "焰巫狐", "g2": "MALE", "child": "炽巫猫"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "重岩龟", "g2": "WILDCARD", "child": "净岩龟"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "金铠蝎"},
+{"p1": "吊缚灵", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "祇岳鹿"},
+{"p1": "电涡蜗", "g1": "WILDCARD", "p2": "金盔仔", "g2": "WILDCARD", "child": "金涡蜗"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "精灵龙", "g2": "WILDCARD", "child": "水灵龙"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "云海鹿", "g2": "WILDCARD", "child": "雷隐鹿"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "暗巫猫", "g2": "WILDCARD", "child": "邪麒麟"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "花冠龙", "g2": "WILDCARD", "child": "雷冠龙"},
+{"p1": "花丽娜", "g1": "WILDCARD", "p2": "浪刃武士", "g2": "WILDCARD", "child": "樱丽娜"},
+{"p1": "雷角马", "g1": "WILDCARD", "p2": "鲁米儿", "g2": "WILDCARD", "child": "雷米儿"},
+{"p1": "暗巫猫", "g1": "MALE", "p2": "焰巫狐", "g2": "FEMALE", "child": "幽巫狐"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "炙灯鱼"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "狱熙龙"},
+{"p1": "魅爱莉", "g1": "WILDCARD", "p2": "花丽娜", "g2": "WILDCARD", "child": "碧艾莉"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "铁拳猿", "g2": "WILDCARD", "child": "石掌猿"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "咒心岩傀"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "森猛犸", "g2": "WILDCARD", "child": "雪猛犸"},
+{"p1": "密林陶洛斯", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "冰峰陶洛斯"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "叶胖达", "g2": "WILDCARD", "child": "雷胖达"},
+{"p1": "迅雷鸟", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "雷鸣鸟"},
+{"p1": "企丸丸", "g1": "WILDCARD", "p2": "电棘鼠", "g2": "WILDCARD", "child": "冰刺鼠"},
+{"p1": "铠格力斯", "g1": "WILDCARD", "p2": "碎岩龟", "g2": "WILDCARD", "child": "格鲁力斯"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "覆海龙", "g2": "WILDCARD", "child": "伊西斯"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "唤夜兽"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "桃旋鼬", "g2": "WILDCARD", "child": "桃晶鲸"},
+{"p1": "香草豹冰", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "巧克力豹冰"},
+{"p1": "喵丝特", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "喵丝特", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "冲浪鸭", "g1": "WILDCARD", "p2": "郁木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "冲浪鸭", "g1": "WILDCARD", "p2": "桃旋鼬", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "热浪鸭", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "草莽猪", "g1": "WILDCARD", "p2": "山岳射手", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "莉欧·莉涅", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "雪绒狐", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "冰缚灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "企丸王", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "翠叶鼠", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "猫蝠怪", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "猫蝠怪", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "猫蝠怪", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "暗巫猫", "g1": "WILDCARD", "p2": "草莽猪", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "暗巫猫", "g1": "WILDCARD", "p2": "新叶猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "暗巫猫", "g1": "WILDCARD", "p2": "米露菲", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "皮皮鸡", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "皮皮鸡", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "皮皮鸡", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "莉欧·莉涅", "g1": "WILDCARD", "p2": "盔盔仔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "幸叶茸", "g1": "WILDCARD", "p2": "桃旋鼬", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "幻悦蝶", "g1": "WILDCARD", "p2": "热浪鸭", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "幻悦蝶", "g1": "WILDCARD", "p2": "炽焰牛", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "玉藻狐", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "玉藻狐", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "玉藻狐", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "露娜蒂", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "宗铭丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "啼卡尔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "黑鸦隐士", "g1": "WILDCARD", "p2": "天擒鸟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "黑鸦隐士", "g1": "WILDCARD", "p2": "疾风隼", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "黑鸦隐士", "g1": "WILDCARD", "p2": "鲨小子", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "紫霞鹿", "g1": "WILDCARD", "p2": "君王美露帕", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "寐魔", "g1": "WILDCARD", "p2": "可可棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "伏特喵", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "电汪汪", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "电汪汪", "g1": "WILDCARD", "p2": "天擒鸟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "电汪汪", "g1": "WILDCARD", "p2": "疾风隼", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "精灵龙", "g1": "WILDCARD", "p2": "海月仙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "精灵龙", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "战冠雀", "g1": "WILDCARD", "p2": "美露帕", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "战冠雀", "g1": "WILDCARD", "p2": "炸蛋鸟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "战冠雀", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "云海鹿", "g1": "WILDCARD", "p2": "冲浪鸭", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "云海鹿", "g1": "WILDCARD", "p2": "幸叶茸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "云海鹿", "g1": "WILDCARD", "p2": "企丸丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "企丸丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "啼卡尔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "燎火鹿", "g1": "WILDCARD", "p2": "企丸王", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "燎火鹿", "g1": "WILDCARD", "p2": "山岳射手", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "炽焰牛", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "炽焰牛", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "花冠龙", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "花冠龙", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "花冠龙", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "波娜兔", "g1": "WILDCARD", "p2": "精灵龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "波娜兔", "g1": "WILDCARD", "p2": "雷角马", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "波娜兔", "g1": "WILDCARD", "p2": "羽箭射手", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雪绵啾", "g1": "WILDCARD", "p2": "艾小兔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雷米儿", "g1": "WILDCARD", "p2": "蚀魂鱿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "焰巫狐", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "焰巫狐", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "焰巫狐", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "壶小象", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "壶小象", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "壶小象", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "猎狼", "g1": "WILDCARD", "p2": "粉粉布偶鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "念影喵", "g1": "WILDCARD", "p2": "猎狼", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "铁拳猿", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "铁拳猿", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "铁拳猿", "g1": "WILDCARD", "p2": "吊缚灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "密林陶洛斯", "g1": "WILDCARD", "p2": "寐魔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "密林陶洛斯", "g1": "WILDCARD", "p2": "新叶猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "密林陶洛斯", "g1": "WILDCARD", "p2": "露娜蒂", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "叶胖达", "g1": "WILDCARD", "p2": "草莽猪", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "叶胖达", "g1": "WILDCARD", "p2": "燎火鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "叶胖达", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "八云犬", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "八云犬", "g1": "WILDCARD", "p2": "融焰娘", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "八云犬", "g1": "WILDCARD", "p2": "荊棘魔仙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "疾风隼", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "电棘鼠", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "电棘鼠", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "肚肚鳄", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "肚肚鳄", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "肚肚鳄", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "严冬鹿", "g1": "WILDCARD", "p2": "伏特喵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "严冬鹿", "g1": "WILDCARD", "p2": "火绒狐", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "严冬鹿", "g1": "WILDCARD", "p2": "瞅什魔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "幸叶茸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "企丸丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "君王美露帕", "g1": "WILDCARD", "p2": "美露帕", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雷角马", "g1": "WILDCARD", "p2": "海月仙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火绒狐", "g1": "WILDCARD", "p2": "郁木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "火绒狐", "g1": "WILDCARD", "p2": "桃旋鼬", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雪绒狐", "g1": "WILDCARD", "p2": "红小鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "君王美露帕", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "粉粉布偶鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "海月仙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "达鼠泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "达鼠泥", "g1": "WILDCARD", "p2": "热浪鸭", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "叶泥泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "宗铭丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "啼卡尔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "荊棘魔仙", "g1": "WILDCARD", "p2": "念影喵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "荊棘魔仙", "g1": "WILDCARD", "p2": "粉粉布偶鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "念影喵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "雷角马", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "喵丝特", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "翠叶鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "电棘鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "新叶猿", "g1": "WILDCARD", "p2": "可可棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "毛老爹", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "毛老爹", "g1": "WILDCARD", "p2": "勾魂鱿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "秘斯媞雅", "g1": "WILDCARD", "p2": "寐魔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "秘斯媞雅", "g1": "WILDCARD", "p2": "露娜蒂", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "秘斯媞雅", "g1": "WILDCARD", "p2": "宗铭丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "笑魇猫", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "笑魇猫", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "笑魇猫", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "瞅什魔", "g1": "WILDCARD", "p2": "郁木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "墨沫姬", "g1": "WILDCARD", "p2": "盔盔仔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "闪丸丸", "g1": "WILDCARD", "p2": "红小鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "博爱蜥", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "博爱蜥", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "博爱蜥", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "姬小兔", "g1": "WILDCARD", "p2": "企丸王", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雷鸣童子", "g1": "WILDCARD", "p2": "莉欧·莉涅", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雷鸣童子", "g1": "WILDCARD", "p2": "蚀魂鱿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雷鸣童子", "g1": "WILDCARD", "p2": "墨沫姬", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "猎狼", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "朋克蜥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "雪绒狐", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "闪丸丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "鲨小子", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "棉悠悠", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "棉悠悠", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "棉悠悠", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "幻悦蝶", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "达鼠泥", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雪墩墩", "g1": "WILDCARD", "p2": "蚀魂鱿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雪墩墩", "g1": "WILDCARD", "p2": "墨沫姬", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "雪墩墩", "g1": "WILDCARD", "p2": "鲨小子", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "骑士蜂", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "骑士蜂", "g1": "WILDCARD", "p2": "天擒鸟", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "骑士蜂", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "闪丸丸", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "盔盔仔", "g1": "WILDCARD", "p2": "冰缚灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "翠叶鼠", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "伏特喵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "瞅什魔", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "疾旋鼬", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "疾旋鼬", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "疾旋鼬", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "月镰魔", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "月镰魔", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "月镰魔", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "吊缚灵", "g1": "WILDCARD", "p2": "毛老爹", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "冰缚灵", "g1": "WILDCARD", "p2": "红小鲨", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "米露菲", "g1": "WILDCARD", "p2": "山岳射手", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "米露菲", "g1": "WILDCARD", "p2": "可可棉花糖", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "克苏鲁之眼", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "克苏鲁之眼", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "克苏鲁之眼", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "恶魔眼", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "恶魔眼", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "恶魔眼", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "绿史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "绿史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "绿史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蓝史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蓝史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "蓝史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "紫史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "紫史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "紫史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "彩虹史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "彩虹史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "彩虹史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "红史莱姆", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "红史莱姆", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "红史莱姆", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "附魔剑", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "附魔剑", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "附魔剑", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "杰诺贝达", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "火灵儿"},
+{"p1": "武道蛙", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "极道蛙"},
+{"p1": "严冬鹿", "g1": "WILDCARD", "p2": "君王美露帕", "g2": "WILDCARD", "child": "冰帝美露帕"},
+{"p1": "曼波王", "g1": "WILDCARD", "p2": "电懒懒", "g2": "WILDCARD", "child": "曼波皇"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "雷角马", "g2": "WILDCARD", "child": "凌角马"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "火绒狐", "g2": "WILDCARD", "child": "雪绒狐"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "梆梆鲶"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "伏特喵", "g2": "WILDCARD", "child": "派克龙"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "黑月女王"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "融焰娘", "g2": "WILDCARD", "child": "热血蜥"},
+{"p1": "狱焰王", "g1": "WILDCARD", "p2": "夜幕魔蝠", "g2": "WILDCARD", "child": "狱阎王"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "新叶猿", "g2": "WILDCARD", "child": "秋叶猿"},
+{"p1": "美露帕", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "苍焰狼", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "球抱苞", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "雷鸣童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "雪墩墩", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "盔盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妮瞅莎", "g1": "WILDCARD", "p2": "烽歌龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妮瞅莎", "g1": "WILDCARD", "p2": "水灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妮瞅莎", "g1": "WILDCARD", "p2": "梆梆鲶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妮瞅莎", "g1": "WILDCARD", "p2": "梦沫姬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炎魔羊", "g1": "WILDCARD", "p2": "霜歌龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炎魔羊", "g1": "WILDCARD", "p2": "莉芳", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暗魔羊", "g1": "WILDCARD", "p2": "妖抱苞", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暗魔羊", "g1": "WILDCARD", "p2": "炼刃鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰丝特", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰丝特", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "灌木羊", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "郁木羊", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "烽歌龙", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜歌龙", "g1": "WILDCARD", "p2": "雷胖达", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "猎狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "融焰娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "荊棘魔仙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "猫蝠怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "炽焰牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "骑士蜂", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "疾旋鼬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "雷鸣童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "雪墩墩", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "盔盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨丸", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨丸", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨丸", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅莉姆", "g1": "WILDCARD", "p2": "金涡蜗", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅莉姆", "g1": "WILDCARD", "p2": "幽巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅莉姆", "g1": "WILDCARD", "p2": "蛊刺妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅莉姆", "g1": "WILDCARD", "p2": "薇莉塔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "碧海龙", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "热浪鸭", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "热浪鸭", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "火灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "艾小兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "布偶鲨", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "詹兔曼", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "詹兔曼", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "詹兔曼", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "詹兔曼", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "球抱苞", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖抱苞", "g1": "WILDCARD", "p2": "碧艾莉", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖抱苞", "g1": "WILDCARD", "p2": "翠羽龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "霹雳犬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "企丸王", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "企丸王", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "猫蝠怪", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暗巫猫", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暗巫猫", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炽巫猫", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炽巫猫", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜幕魔蝠", "g1": "WILDCARD", "p2": "暗魔羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜幕魔蝠", "g1": "WILDCARD", "p2": "碧艾莉", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜幕魔蝠", "g1": "WILDCARD", "p2": "翠羽龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜幕魔蝠", "g1": "WILDCARD", "p2": "金盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "莉欧·莉涅", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "莉欧·莉涅", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "黑鸦隐士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "电汪汪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "骑士蜂", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炸蛋鸟", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炸蛋鸟", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波霸牛", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "花冠龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "焰巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "博爱蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "月镰魔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幻悦蝶", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幻悦蝶", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "遁地鼠", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "遁地鼠", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "蒲蒲飞芽", "g1": "WILDCARD", "p2": "塞赫麦特", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺贝达", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺贝达", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺贝达", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺贝达", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "火灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "雪绒狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "闪丸丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "紫霞鹿", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "燎火鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "碎岩龟", "g1": "WILDCARD", "p2": "碧艾莉", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "碎岩龟", "g1": "WILDCARD", "p2": "森猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "碎岩龟", "g1": "WILDCARD", "p2": "金盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电懒懒", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电懒懒", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电懒懒", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电懒懒", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电汪汪", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电涡蜗", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电涡蜗", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电涡蜗", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "电涡蜗", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "精灵龙", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "精灵龙", "g1": "WILDCARD", "p2": "绿苔绒怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "火麒麟", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "邪麒麟", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "炽焰牛", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "花冠龙", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "花冠龙", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷冠龙", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波娜兔", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波娜兔", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "鲁米儿", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "鲁米儿", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "雪绒狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "闪丸丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "冰缚灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰巫狐", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰巫狐", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "猎狼", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "猎狼", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "猎狼", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冥灯鱼", "g1": "WILDCARD", "p2": "密林陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冥灯鱼", "g1": "WILDCARD", "p2": "秘斯媞雅", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "念影喵", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "念影喵", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "念影喵", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "天擒鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魅爱莉", "g1": "WILDCARD", "p2": "苍焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魅爱莉", "g1": "WILDCARD", "p2": "烽歌龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魅爱莉", "g1": "WILDCARD", "p2": "水灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "魅爱莉", "g1": "WILDCARD", "p2": "香草豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "铁拳猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "毛老爹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "铁拳猿", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "石掌猿", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "黑鸦隐士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "电汪汪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "雪墩墩", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "森猛犸", "g1": "WILDCARD", "p2": "冰帝美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "森猛犸", "g1": "WILDCARD", "p2": "浪刃武士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "密林陶洛斯", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "叶胖达", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "叶胖达", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "花丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "噬魂兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "旺财", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "桃蛛娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "花冠龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "笑魇猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "博爱蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "月镰魔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "八云犬", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "八云犬", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷鸣鸟", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "铠格力斯", "g1": "WILDCARD", "p2": "冬丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "铠格力斯", "g1": "WILDCARD", "p2": "梆梆鲶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "铠格力斯", "g1": "WILDCARD", "p2": "炼刃鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "铠格力斯", "g1": "WILDCARD", "p2": "凛光犬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兜兜灵", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兜兜灵", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兜兜灵", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兜兜灵", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "黑鸦隐士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "雷米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "雷鸣童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "雪墩墩", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "肚肚鳄", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "肚肚鳄", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "严冬鹿", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吹雪狐", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "冰丝特", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "炸蛋鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "鲁米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "香草豹冰", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "炽巫猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰姬灵", "g1": "WILDCARD", "p2": "冬丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰姬灵", "g1": "WILDCARD", "p2": "水灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰姬灵", "g1": "WILDCARD", "p2": "梆梆鲶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰姬灵", "g1": "WILDCARD", "p2": "梦沫姬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海月仙", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海月仙", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "祇岳鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "火灵儿", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "武道蛙", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "君王美露帕", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "雪绵啾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "火灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "闪丸丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "艾小兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "曼波王", "g1": "WILDCARD", "p2": "金涡蜗", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "曼波王", "g1": "WILDCARD", "p2": "冰帝美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "曼波王", "g1": "WILDCARD", "p2": "菇咚", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "曼波王", "g1": "WILDCARD", "p2": "蛊刺妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "草莽猪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "燎火鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷角马", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷角马", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷角马", "g1": "WILDCARD", "p2": "绿苔绒怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雪绒狐", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雪绒狐", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "蒲蒲飞芽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "火麒麟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "春彩娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "秘斯媞雅", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "融焰娘", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "绿苔绒怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梆梆鲶", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "炽巫猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "女皇蜂", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "达鼠泥", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "达鼠泥", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "吊缚灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "波娜兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "海月仙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "达鼠泥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荊棘魔仙", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "荊棘魔仙", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "朋克蜥", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "热血蜥", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "波娜兔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "海月仙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "朋克蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "狱焰王", "g1": "WILDCARD", "p2": "冰帝美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "狱阎王", "g1": "WILDCARD", "p2": "冬丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "旺财", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "旺财", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "幻悦蝶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "海月灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "武道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "花丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "噬魂兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "迅雷鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "颚莉丝", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "莉欧·莉涅", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "蚀魂鱿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "墨沫姬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "冰缚灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "毛老爹", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "毛老爹", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "波霸牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "水灵儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "花丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "噬魂兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "桃蛛娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "菇咚", "g1": "WILDCARD", "p2": "狱焰王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "菇咚", "g1": "WILDCARD", "p2": "连理龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "铁拳猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "肚肚鳄", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "笑魇猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "月镰魔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "墨丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "旺财", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "桃蛛娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "笑魇猫", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "勾魂鱿", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "勾魂鱿", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "勾魂鱿", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "花丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "桃蛛娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "精灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "念影喵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "雷角马", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "羽箭射手", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "墨沫姬", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梦沫姬", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吓丝妮", "g1": "WILDCARD", "p2": "森猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吓丝妮", "g1": "WILDCARD", "p2": "狱焰王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吓丝妮", "g1": "WILDCARD", "p2": "金盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "莉芳", "g1": "WILDCARD", "p2": "幽巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "莉芳", "g1": "WILDCARD", "p2": "薇莉塔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "闪丸丸", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "捣蛋猫", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "捣蛋猫", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "捣蛋猫", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "博爱蜥", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾小兔", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾小兔", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "邪麒麟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "炸蛋鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "鲁米儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "女皇蜂", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "女皇蜂", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷鸣童子", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "大红呱", "g1": "WILDCARD", "p2": "碎岩龟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "大红呱", "g1": "WILDCARD", "p2": "冰帝美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "大红呱", "g1": "WILDCARD", "p2": "菇咚", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "大红呱", "g1": "WILDCARD", "p2": "吓丝妮", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "绿苔绒怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "山岳射手", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "山岳射手", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "山岳射手", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "女皇蜂", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "浪刃武士", "g1": "WILDCARD", "p2": "暗魔羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "浪刃武士", "g1": "WILDCARD", "p2": "碧艾莉", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "浪刃武士", "g1": "WILDCARD", "p2": "金盔仔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "美露帕", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "紫霞鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "融焰娘", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "荊棘魔仙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "连理龙", "g1": "WILDCARD", "p2": "金涡蜗", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "连理龙", "g1": "WILDCARD", "p2": "幽巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "蛊刺妖", "g1": "WILDCARD", "p2": "狱焰王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "蛊刺妖", "g1": "WILDCARD", "p2": "连理龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "密林陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "秘斯媞雅", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "可可棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "滑水蛇", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红小鲨", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红小鲨", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红小鲨", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "红小鲨", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "汪宗师", "g1": "WILDCARD", "p2": "霜歌龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "汪宗师", "g1": "WILDCARD", "p2": "雷胖达", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "汪宗师", "g1": "WILDCARD", "p2": "莉芳", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "汪宗师", "g1": "WILDCARD", "p2": "鞘刀鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "天羽龙", "g1": "WILDCARD", "p2": "苍焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "天羽龙", "g1": "WILDCARD", "p2": "香草豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "天羽龙", "g1": "WILDCARD", "p2": "迅雷鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "翠羽龙", "g1": "WILDCARD", "p2": "炼刃鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "企丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "焰巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "叶胖达", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "博爱蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "覆海龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "严冬鹿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "喵璐璐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "霹雳犬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "暗巫猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "密林陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "秘斯媞雅", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "可可棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "冰刺鼠", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "秋叶猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "骑士蜂", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "粉粉布偶鲨", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "粉粉布偶鲨", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "粉粉布偶鲨", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "力士獒", "g1": "WILDCARD", "p2": "噬魂兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "力士獒", "g1": "WILDCARD", "p2": "迅雷鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "力士獒", "g1": "WILDCARD", "p2": "颚莉丝", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "朱雀", "g1": "WILDCARD", "p2": "苍焰狼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "朱雀", "g1": "WILDCARD", "p2": "迅雷鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "可可棉花糖", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "可可棉花糖", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "鞘刀鱼", "g1": "WILDCARD", "p2": "炎魔羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "鞘刀鱼", "g1": "WILDCARD", "p2": "薇莉塔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盔盔仔", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盔盔仔", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "猫蝠怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "黑鸦隐士", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "电汪汪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "骑士蜂", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "凛光犬", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "凛光犬", "g1": "WILDCARD", "p2": "翠羽龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "冰丝特", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "勾魂鱿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "捣蛋猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "吊缚灵", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷云鹫", "g1": "WILDCARD", "p2": "炎魔羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷云鹫", "g1": "WILDCARD", "p2": "金涡蜗", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷云鹫", "g1": "WILDCARD", "p2": "幽巫狐", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "雷云鹫", "g1": "WILDCARD", "p2": "薇莉塔", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "咕咕桑葩", "g1": "WILDCARD", "p2": "烽歌龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "咕咕桑葩", "g1": "WILDCARD", "p2": "水灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "咕咕桑葩", "g1": "WILDCARD", "p2": "香草豹冰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "咕咕桑葩", "g1": "WILDCARD", "p2": "梦沫姬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "热浪鸭", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "精灵龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "趴趴鲶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "颚莉丝", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "颚莉丝", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "绸笠蛾", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "铁拳猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "肚肚鳄", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "毛老爹", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "笑魇猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "疾旋鼬", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "月镰魔", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜镰魔", "g1": "WILDCARD", "p2": "冬丸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜镰魔", "g1": "WILDCARD", "p2": "妖抱苞", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜镰魔", "g1": "WILDCARD", "p2": "炼刃鱼", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "霜镰魔", "g1": "WILDCARD", "p2": "凛光犬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "雷冠龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "石掌猿", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "天阴童子", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "热浪鸭", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "炽焰牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "球犰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "疾旋鼬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "绸笠蛾", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "绸笠蛾", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "绸笠蛾", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "猫蝠怪", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "炽焰牛", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "球犰", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "疾旋鼬", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "碧海龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "闪丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "极道蛙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "流沙蛇", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吊缚灵", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "吊缚灵", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰缚灵", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "冰缚灵", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "灌木羊", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "幻悦蝶", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "达鼠泥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "热血蜥", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "企丸王", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "暗巫猫", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "叶胖达", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "山岳射手", "g2": "WILDCARD", "child": "菇波"},
+{"p1": "姬小兔", "g1": "WILDCARD", "p2": "勾魂鱿", "g2": "WILDCARD", "child": "蚀魂鱿"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "日耀驹"},
+{"p1": "喵璐璐", "g1": "WILDCARD", "p2": "墨沫姬", "g2": "WILDCARD", "child": "梦沫姬"},
+{"p1": "伏特喵", "g1": "WILDCARD", "p2": "企丸丸", "g2": "WILDCARD", "child": "闪丸丸"},
+{"p1": "荊棘魔仙", "g1": "WILDCARD", "p2": "姬小兔", "g2": "WILDCARD", "child": "艾小兔"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "雷鸣童子", "g2": "WILDCARD", "child": "天阴童子"},
+{"p1": "羽箭射手", "g1": "WILDCARD", "p2": "遁地鼠", "g2": "WILDCARD", "child": "山岳射手"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "寒峰兽"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "浪刃武士", "g2": "WILDCARD", "child": "鬼刃武士"},
+{"p1": "连理龙", "g1": "WILDCARD", "p2": "冲浪鸭", "g2": "WILDCARD", "child": "海誓龙"},
+{"p1": "蛊刺妖", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "电针妖"},
+{"p1": "趴趴鲶", "g1": "WILDCARD", "p2": "滑水蛇", "g2": "WILDCARD", "child": "流沙蛇"},
+{"p1": "鲨小子", "g1": "WILDCARD", "p2": "燎火鹿", "g2": "WILDCARD", "child": "红小鲨"},
+{"p1": "春彩娘", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "翠羽龙"},
+{"p1": "布偶鲨", "g1": "WILDCARD", "p2": "红小鲨", "g2": "WILDCARD", "child": "粉粉布偶鲨"},
+{"p1": "朱雀", "g1": "WILDCARD", "p2": "覆海龙", "g2": "WILDCARD", "child": "清雀"},
+{"p1": "球犰", "g1": "WILDCARD", "p2": "棉花糖", "g2": "WILDCARD", "child": "可可棉花糖"},
+{"p1": "鞘刀鱼", "g1": "WILDCARD", "p2": "红小鲨", "g2": "WILDCARD", "child": "炼刃鱼"},
+{"p1": "碎岩龟", "g1": "WILDCARD", "p2": "盔盔仔", "g2": "WILDCARD", "child": "金盔仔"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "迅雷鸟", "g2": "WILDCARD", "child": "疾霜鸟"},
+{"p1": "霹雳犬", "g1": "WILDCARD", "p2": "吹雪狐", "g2": "WILDCARD", "child": "凛光犬"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "狱焰王", "g2": "WILDCARD", "child": "腾炎龙"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "吹雪狐", "g2": "WILDCARD", "child": "寒霜兽"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "川霜龙"},
+{"p1": "疾旋鼬", "g1": "WILDCARD", "p2": "炽焰牛", "g2": "WILDCARD", "child": "桃旋鼬"},
+{"p1": "月镰魔", "g1": "WILDCARD", "p2": "毛老爹", "g2": "WILDCARD", "child": "霜镰魔"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "织夜鹿"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "绸笠蛾", "g2": "WILDCARD", "child": "绢笠蛾"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "战冠雀", "g2": "WILDCARD", "child": "金棘兽"},
+{"p1": "吊缚灵", "g1": "WILDCARD", "p2": "毛掸儿", "g2": "WILDCARD", "child": "冰缚灵"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "丹烽"},
+{"p1": "红史莱姆", "g1": "WILDCARD", "p2": "蓝史莱姆", "g2": "WILDCARD", "child": "紫史莱姆"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "绿史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "蓝史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "夜明史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "红史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "绿史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "蓝史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "夜明史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "夜明蝙蝠", "g1": "WILDCARD", "p2": "红史莱姆", "g2": "WILDCARD", "child": "彩虹史莱姆"},
+{"p1": "洞穴蝙蝠", "g1": "WILDCARD", "p2": "紫史莱姆", "g2": "WILDCARD", "child": "夜明蝙蝠"},
+{"p1": "幽焰狼", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽焰狼", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽焰狼", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽焰狼", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "阿努比斯", "g1": "WILDCARD", "p2": "白绒雪怪", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "暴电熊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "混沌骑士", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "红菇娘", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "异构格里芬", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "重岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "幽恋娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "魔渊龙", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "妮瞅莎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "冰姬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霄龙", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "重岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "幽恋娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "塞赫麦特", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "白真雪雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "驭雷马", "g1": "WILDCARD", "p2": "白绒雪怪", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "恐炬灵", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "重岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "幽恋娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "拉比耶尔", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "阿努比斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "双心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "焰煌", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "重岩龟", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净岩龟", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "紫狐娇", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "妖焰灯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "塞赫麦特", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "兔绣袖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "白真雪雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺多兰", "g1": "WILDCARD", "p2": "白绒雪怪", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥铠蝎", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥铠蝎", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥铠蝎", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥铠蝎", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥铠蝎", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金铠蝎", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金铠蝎", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金铠蝎", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "妮瞅莎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "铠格力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "冰姬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐甲龙", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "燎火舞伶", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "沁莲龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "墨罗娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "泰锋", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暴电熊", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷隐鹿", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷隐鹿", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "樱丽娜", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "樱丽娜", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "樱丽娜", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "樱丽娜", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "樱丽娜", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "妮瞅莎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜蔓爵", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "塞赫麦特", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "兔绣袖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "白真雪雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "昭炎狐", "g1": "WILDCARD", "p2": "白绒雪怪", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥灯鱼", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥灯鱼", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冥灯鱼", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "灵曦龙", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "阿努比斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "双心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "金驰兽", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "双心岩傀", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "咒心岩傀", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雪猛犸", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰峰陶洛斯", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰峰陶洛斯", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰峰陶洛斯", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰峰陶洛斯", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰峰陶洛斯", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "踏春兔", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "阿努比斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "双心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "幽恋娜", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷冥鸟", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷冥鸟", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷冥鸟", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷冥鸟", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷冥鸟", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷鸣鸟", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "雷鸣鸟", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "格鲁力斯", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "格鲁力斯", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "重岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "幽恋娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "红菇娘", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "兔绣袖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "荷鲁斯", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "唤冬兽", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "双心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "覆海龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凉晶鲸", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "巧克力豹冰", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "空涡龙", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "梅杜娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燎火舞伶", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "幽焰狼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "樱丽娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "白真雪雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "焰煌", "g1": "WILDCARD", "p2": "白绒雪怪", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "曼波皇", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "妮瞅莎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "铠格力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "冰姬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "狱阎王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "奥沧鲸", "g1": "WILDCARD", "p2": "霜镰魔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凌角马", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凌角马", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "凌角马", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "驭雷马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "昭炎狐", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "焰煌", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "妖焰灯", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "佩克龙", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "派克龙", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "派克龙", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "派克龙", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "派克龙", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "默世鹿", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "暴电熊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "梅杜娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "百合女王", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "沁莲龙", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "梅杜娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "墨罗娜", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缀夜星", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "雷隐鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "冥灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "妖焰灯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "鬼刃武士", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "塞赫麦特", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "辉月伊", "g1": "WILDCARD", "p2": "白真雪雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "暮尘蛾", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "缚乃伊", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "阿努比斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "魔渊龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "拉比耶尔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "双心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "盗影鸦", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "红菇娘", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "面惧", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "夜冥驹", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "日耀驹", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "疾霜鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "覆海龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "贝菈诺娃", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梁叶龙", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海皇鲸", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "燧火鸟", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "磐峰兽", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "寒峰兽", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "鬼刃武士", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "暴电熊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "雪猛犸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "燧火鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "熔岩兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "圣光骑士", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "贝菈露洁", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "海誓龙", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "电针妖", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "电针妖", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "焰煌", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "塞赫麦特", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "天羽龙", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "阿努比斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "魔渊龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "驭雷马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "焰煌", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "兔绣袖", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "灵曦龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "沁莲龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "梅杜娜", "g1": "WILDCARD", "p2": "泰锋", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白真雪雀", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "妮瞅莎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "碧月龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "魅爱莉", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "冰姬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "天羽龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "朱雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "霜牙王", "g1": "WILDCARD", "p2": "咕咕桑葩", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "力士獒", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "力士獒", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "朱雀", "g1": "WILDCARD", "p2": "唤夜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "朱雀", "g1": "WILDCARD", "p2": "殁殃", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "清雀", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "清雀", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "幽恋娜", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "派克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "盗影鸦", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "疾霜鸟", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "疾霜鸟", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "疾霜鸟", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "疾霜鸟", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "冥铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "踏春兔", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "雷冥鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "巧克力豹冰", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "佩克龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "缀夜星", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "缚乃伊", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "面惧", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "夜冥驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "磐峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "海誓龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "波鲁杰克斯", "g1": "WILDCARD", "p2": "力士獒", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "覆海龙", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "狱熙龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "熔岩兽", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "凌角马", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "流焰龙", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "川霜龙", "g1": "WILDCARD", "p2": "电针妖", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "杰诺路达", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "格鲁力斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "净世鹿", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "织夜鹿", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "绢笠蛾", "g1": "WILDCARD", "p2": "寒霜兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "金铠蝎", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "炙灯鱼", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "金驰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "凉晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "清雀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "流焰龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "艾基鲁迦", "g1": "WILDCARD", "p2": "绢笠蛾", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "净岩龟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "咒心岩傀", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "黑月女王", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "腾炎龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "织夜鹿", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "冰棘兽", "g1": "WILDCARD", "p2": "丹烽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "恐炬灵", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "紫狐娇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "雷鸣鸟", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "梁叶龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "杰诺路达", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "泰锋", "g1": "WILDCARD", "p2": "冰棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "丹烽", "g1": "WILDCARD", "p2": "曼波皇", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "冰峰陶洛斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "伊西斯", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "桃晶鲸", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "日耀驹", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "寒峰兽", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "川霜龙", "g2": "WILDCARD", "child": "绿苔绒怪"},
+{"p1": "白绒雪怪", "g1": "WILDCARD", "p2": "金棘兽", "g2": "WILDCARD", "child": "绿苔绒怪"}
+];
+
+/* ---- 运行时构建完整帕鲁表（基础 + 变异帕鲁）----
+ * 变异帕鲁无配种力量值，power=null，mutation=true；
+ * 它们可作父母/目标参与变异匹配，但不参与平均值算法。
+ */
+const ALL_PALS = (function () {
+  const map = new Map();
+  for (const p of PALS) map.set(p.name, { name: p.name, code: p.code, power: p.power, mutation: false });
+  const ensure = (name) => {
+    if (!map.has(name)) map.set(name, { name: name, code: null, power: null, mutation: true });
+  };
+  for (const m of MUTATIONS) { ensure(m.p1); ensure(m.p2); ensure(m.child); }
+  return Array.from(map.values());
+})();
+
+/* 有力量值的帕鲁（仅这些参与平均值算法的"后代候选"与"父母配对"）*/
+const POWERED_PALS = ALL_PALS.filter(p => p.power != null);
+/* 名称 -> 帕鲁对象 的查找表 */
+const PAL_BY_NAME = new Map(ALL_PALS.map(p => [p.name, p]));
+
+/* =====================================================================
+ * 算法区
+ * ===================================================================== */
+
+/**
+ * 找配种力量最接近 targetPower 的所有（有力量值的）帕鲁。
+ * 先求最小差值，再返回所有等于该差值的帕鲁（并列取全部）。
+ */
+function findClosestPals(targetPower) {
+  let minDiff = Infinity;
+  for (const p of POWERED_PALS) {
+    const diff = Math.abs(p.power - targetPower);
+    if (diff < minDiff) minDiff = diff;
+  }
+  const result = [];
+  for (const p of POWERED_PALS) {
+    if (Math.abs(p.power - targetPower) === minDiff) result.push(p);
+  }
+  return result;
+}
+
+/**
+ * 变异规则匹配：返回所有"父母名匹配（顺序无关、忽略性别）"的变异规则。
+ */
+function matchMutations(nameA, nameB) {
+  const hits = [];
+  for (const m of MUTATIONS) {
+    if ((m.p1 === nameA && m.p2 === nameB) || (m.p1 === nameB && m.p2 === nameA)) {
+      hits.push(m);
+    }
+  }
+  return hits;
+}
+
+/**
+ * 正向配种：
+ * 1) 先查变异规则 → 命中则返回变异后代（可能多条规则多个后代）
+ * 2) 未命中且父母都有力量值 → 平均值算法
+ * 3) 否则无法用平均值计算
+ */
+function forwardBreed(dadName, momName) {
+  const dad = PAL_BY_NAME.get(dadName);
+  const mom = PAL_BY_NAME.get(momName);
+  if (!dad || !mom) return { type: "error", reason: "未找到帕鲁" };
+
+  const rules = matchMutations(dadName, momName);
+  if (rules.length) {
+    // 收集所有变异后代（去重保序）
+    const seen = new Set();
+    const children = [];
+    for (const r of rules) {
+      if (!seen.has(r.child)) { seen.add(r.child); children.push(PAL_BY_NAME.get(r.child)); }
+    }
+    return { type: "mutation", dad, mom, rules, children };
+  }
+
+  if (dad.power == null || mom.power == null) {
+    return { type: "noavg", dad, mom, reason: "该组合无变异规则，且涉及无配种力量值的变异帕鲁，无法用平均值算法计算" };
+  }
+  const avg = (dad.power + mom.power) / 2;
+  const offspring = findClosestPals(avg);
+  return { type: "average", dad, mom, avg, offspring };
+}
+
+/**
+ * 反向配种：找出所有能产出目标的父母组合
+ * - mutCombos：变异规则中 child===目标 的 (p1,p2)
+ * - avgCombos：仅当目标有力量值时，遍历有力量值的两两组合，平均值命中目标
+ */
+function reverseBreed(targetName) {
+  const target = PAL_BY_NAME.get(targetName);
+
+  const mutCombos = [];
+  for (const m of MUTATIONS) {
+    if (m.child === targetName) {
+      mutCombos.push({ dad: PAL_BY_NAME.get(m.p1), mom: PAL_BY_NAME.get(m.p2) });
+    }
+  }
+
+  const avgCombos = [];
+  if (target && target.power != null) {
+    for (let i = 0; i < POWERED_PALS.length; i++) {
+      for (let j = i; j < POWERED_PALS.length; j++) {
+        const a = POWERED_PALS[i], b = POWERED_PALS[j];
+        const avg = (a.power + b.power) / 2;
+        const offspring = findClosestPals(avg);
+        if (offspring.some(p => p.name === targetName)) {
+          avgCombos.push({ dad: a, mom: b, avg });
+        }
+      }
+    }
+  }
+  return { target, mutCombos, avgCombos };
+}
+
+/* =====================================================================
+ * 界面区
+ * ===================================================================== */
+
+// 基础帕鲁按力量降序、变异帕鲁按名称排序，便于下拉查找
+const BASE_SORTED = PALS.slice().sort((a, b) => b.power - a.power);
+const MUT_SORTED = ALL_PALS.filter(p => p.mutation).sort((a, b) => a.name.localeCompare(b.name, "zh"));
+
+// 填充下拉框（基础/变异分组）
+function fillSelect(sel, pickFirst) {
+  const gBase = document.createElement("optgroup");
+  gBase.label = "基础帕鲁（" + BASE_SORTED.length + "）";
+  for (const p of BASE_SORTED) {
+    const o = document.createElement("option");
+    o.value = p.name; o.textContent = p.name + "（" + p.power + "）";
+    gBase.appendChild(o);
+  }
+  const gMut = document.createElement("optgroup");
+  gMut.label = "变异帕鲁（" + MUT_SORTED.length + "）";
+  for (const p of MUT_SORTED) {
+    const o = document.createElement("option");
+    o.value = p.name; o.textContent = p.name;
+    gMut.appendChild(o);
+  }
+  sel.appendChild(gBase);
+  sel.appendChild(gMut);
+}
+fillSelect(document.getElementById("fwdDad"));
+fillSelect(document.getElementById("fwdMom"));
+fillSelect(document.getElementById("revTarget"));
+
+/* ---- 选择记忆：刷新后自动恢复上次选择 ----
+ * 原理：选择变化时把值存进 localStorage；页面加载时读出并设回下拉框。
+ * 对爸爸/妈妈/目标三个下拉框统一处理，体验一致。
+ */
+const SEL_KEYS = { fwdDad: "lastDad", fwdMom: "lastMom", revTarget: "lastTarget" };
+function restoreSelect(id) {
+  const sel = document.getElementById(id);
+  const saved = localStorage.getItem(SEL_KEYS[id]);
+  if (saved && Array.from(sel.options).some(o => o.value === saved)) {
+    sel.value = saved;                 // 恢复上次选择（校验该值仍存在于选项中）
+  } else if (id === "fwdMom") {
+    sel.selectedIndex = 1;             // 默认妈妈选第二项，便于演示
+  }
+  // 选择变化时记忆
+  sel.onchange = function () { localStorage.setItem(SEL_KEYS[id], sel.value); };
+}
+restoreSelect("fwdDad");
+restoreSelect("fwdMom");
+restoreSelect("revTarget");
+
+// 单个帕鲁 chip（变异帕鲁用紫色样式）
+function palChip(p) {
+  const cls = p.mutation ? "pal-chip mut" : "pal-chip";
+  const pw = p.power != null ? p.power : "变异";
+  return '<span class="' + cls + '"><span class="name">' + p.name + '</span><span class="pw">' + pw + '</span></span>';
+}
+
+// 渲染正向结果
+function renderForward(res) {
+  const box = document.getElementById("fwdResult");
+  if (res.type === "error") { box.innerHTML = '<div class="empty">' + res.reason + "</div>"; return; }
+
+  if (res.type === "mutation") {
+    const chips = res.children.map(palChip).join("");
+    box.innerHTML =
+      '<div class="mut-hit">' +
+        '<div class="title">⚡ 变异配种命中！</div>' +
+        '<div>父母：<b>' + res.dad.name + '</b> ＋ <b>' + res.mom.name + '</b></div>' +
+        '<div style="margin-top:4px;">' + chips + '</div>' +
+      '</div>';
+    return;
+  }
+
+  if (res.type === "noavg") {
+    box.innerHTML = '<div class="warn">' + res.reason + "</div>";
+    return;
+  }
+
+  // average
+  const names = res.offspring.map(p => p.name).join(" / ");
+  box.innerHTML =
+    '<div style="margin-top:6px;">' + res.offspring.map(palChip).join("") + '</div>' +
+    '<div class="avg-info">父母平均力量：<b style="color:var(--gold)">' + res.avg + '</b>　命中后代：' + names + '</div>';
+}
+
+// 渲染反向结果（变异 / 普通分区）
+function renderReverse(res) {
+  const box = document.getElementById("revResult");
+  if (!res.target) { box.innerHTML = '<div class="empty">未找到目标帕鲁</div>'; return; }
+
+  const tName = res.target.name;
+  let html = '<div class="avg-info">目标：<b>' + tName + '</b>' +
+    (res.target.power != null ? '（力量 ' + res.target.power + '）' : '（变异帕鲁·无力量值）') + '</div>';
+
+  // —— 变异配种组合 ——
+  html += '<div class="section-title" style="color:var(--purple)">⚡ 变异配种组合<span class="cnt">' + res.mutCombos.length + '</span></div>';
+  if (res.mutCombos.length === 0) {
+    html += '<div class="empty">无变异规则可配出 ' + tName + '</div>';
+  } else {
+    html += '<div class="combo-list">';
+    for (const c of res.mutCombos) {
+      html += '<div class="combo mut"><span class="p">' + c.dad.name + '</span><span class="x">＋</span>' +
+        '<span class="p">' + c.mom.name + '</span><span class="pw"><span class="badge">变异</span></span></div>';
+    }
+    html += '</div>';
+  }
+
+  // —— 普通配种组合（平均值算法）——
+  html += '<div class="section-title" style="color:var(--blue)">普通配种组合（平均值算法）<span class="cnt">' + res.avgCombos.length + '</span></div>';
+  if (res.avgCombos.length === 0) {
+    html += '<div class="empty">' + (res.target.power != null ? '无平均值组合可配出 ' + tName : '该目标为变异帕鲁，无平均值算法组合') + '</div>';
+  } else {
+    html += '<div class="combo-list">';
+    for (const c of res.avgCombos) {
+      html += '<div class="combo"><span class="p">' + c.dad.name + '</span><span class="x">＋</span>' +
+        '<span class="p">' + c.mom.name + '</span><span class="pw">均值 ' + c.avg + '</span></div>';
+    }
+    html += '</div>';
+  }
+
+  box.innerHTML = html;
+}
+
+/* =====================================================================
+ * 历史记录区：localStorage 增删查
+ * ===================================================================== */
+const HIS_KEY = "pal_breeding_history_v1";
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HIS_KEY)) || []; }
+  catch { return []; }
+}
+function saveHistory(list) {
+  localStorage.setItem(HIS_KEY, JSON.stringify(list));
+}
+function addHistory(item) {
+  const list = loadHistory();
+  list.unshift(item);
+  if (list.length > 100) list.length = 100;
+  saveHistory(list);
+  renderHistory();
+}
+function renderHistory() {
+  const list = loadHistory();
+  const box = document.getElementById("hisList");
+  if (list.length === 0) { box.innerHTML = '<div class="empty">暂无历史记录</div>'; return; }
+  box.innerHTML = list.map(function (it) {
+    if (it.type === "fwd") {
+      const mutTag = it.mode === "mutation" ? ' <span class="tag mut">变异</span>' : "";
+      return '<div class="his-item"><span class="tag fwd">正向</span>' + mutTag +
+        it.dad + " ＋ " + it.mom + " → <span class=\"res\">" + it.result + "</span>" +
+        '<span class="time">' + it.time + "</span></div>";
+    } else {
+      return '<div class="his-item"><span class="tag rev">反向</span>目标：' + it.target +
+        "，变异 <span class=\"res\">" + it.mutCount + "</span> / 普通 <span class=\"res\">" + it.avgCount + "</span>" +
+        '<span class="time">' + it.time + "</span></div>";
+    }
+  }).join("");
+}
+
+/* =====================================================================
+ * 事件绑定
+ * ===================================================================== */
+function nowStr() {
+  const d = new Date();
+  const p = function (n) { return String(n).padStart(2, "0"); };
+  return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+
+// 正向查询
+document.getElementById("fwdBtn").addEventListener("click", function () {
+  const dadName = document.getElementById("fwdDad").value;
+  const momName = document.getElementById("fwdMom").value;
+  const res = forwardBreed(dadName, momName);
+  renderForward(res);
+  if (res.type === "mutation" || res.type === "average") {
+    addHistory({
+      type: "fwd",
+      mode: res.type === "mutation" ? "mutation" : "average",
+      dad: res.dad.name,
+      mom: res.mom.name,
+      result: (res.type === "mutation" ? res.children : res.offspring).map(function (p) { return p.name; }).join(" / "),
+      time: nowStr()
+    });
+  }
+});
+
+// 反向查询
+document.getElementById("revBtn").addEventListener("click", function () {
+  const targetName = document.getElementById("revTarget").value;
+  const res = reverseBreed(targetName);
+  renderReverse(res);
+  addHistory({
+    type: "rev",
+    target: targetName,
+    mutCount: res.mutCombos.length,
+    avgCount: res.avgCombos.length,
+    time: nowStr()
+  });
+});
+
+// 清空历史
+document.getElementById("clearHisBtn").addEventListener("click", function () {
+  if (!confirm("确定要清空全部历史记录吗？")) return;
+  saveHistory([]);
+  renderHistory();
+});
+
+// 初次渲染历史
+renderHistory();
+
+/* =====================================================================
+ * 留言板模块（与后端 http://127.0.0.1:8000 交互）
+ *   GET  /messages  -> 读取留言列表
+ *   POST /messages  -> 提交新留言（JSON: {name, content}）
+ * ===================================================================== */
+var MSG_API = "http://127.0.0.1:8000";
+
+// HTML 转义，避免留言内容导致注入
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// 格式化留言时间，兼容 ISO 字符串与时间戳
+function fmtMsgTime(t) {
+  if (!t) return "";
+  var d = new Date(t);
+  if (isNaN(d.getTime())) return String(t);
+  var pad = function (n) { return n < 10 ? "0" + n : n; };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+    " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+// 渲染留言列表到页面
+function renderMessages(list) {
+  var box = document.getElementById("msgList");
+  if (!Array.isArray(list) || list.length === 0) {
+    box.innerHTML = '<div class="msg-empty">还没有留言，快来抢沙发吧~</div>';
+    return;
+  }
+  var html = "";
+  list.forEach(function (m) {
+    // 兼容多种字段命名
+    var name = m.name || m.nickname || m.user || "";
+    var content = m.content || m.message || m.text || "";
+    var time = m.time || m.created_at || m.createdAt || m.timestamp || "";
+    // 读取置顶字段，兼容不同命名
+    var isPinned = !!(m.isPinned || m.is_pinned || m.pinned);
+    if (!String(name).trim()) name = "匿名玩家";
+    // 置顶留言添加 pinned class 和置顶标签
+    var itemCls = "msg-item" + (isPinned ? " pinned" : "");
+    var pinTag = isPinned ? '<span class="pin-tag">置顶</span>' : "";
+    html += '<div class="' + itemCls + '">' +
+      '<div class="m-head"><span class="m-name">' + pinTag + escapeHtml(name) +
+      '</span><span class="m-time">' + escapeHtml(fmtMsgTime(time)) + '</span></div>' +
+      '<div class="m-body">' + escapeHtml(content) + '</div>' +
+      '</div>';
+  });
+  box.innerHTML = html;
+}
+
+// 在提示行显示文字（type: "" | "err" | "ok"）
+function showMsgTip(text, type) {
+  var tip = document.getElementById("msgTip");
+  tip.textContent = text || "";
+  tip.className = "msg-tip" + (type ? " " + type : "");
+}
+
+// 从后端拉取留言
+function loadMessages() {
+  fetch(MSG_API + "/messages", { method: "GET" })
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      // 兼容后端返回数组 或 {messages:[...]} 两种结构
+      var list = Array.isArray(data) ? data : (data && data.messages) || [];
+      renderMessages(list);
+    })
+    .catch(function (err) {
+      showMsgTip("加载留言失败：" + err.message + "（请确认后端已启动）", "err");
+      renderMessages([]);
+    });
+}
+
+// 提交留言
+document.getElementById("msgSubmit").addEventListener("click", function () {
+  var contentEl = document.getElementById("msgContent");
+  var nameEl = document.getElementById("msgName");
+  var content = contentEl.value.trim();
+  var name = nameEl.value.trim();
+  // 留言内容为空时提示用户，不发送
+  if (!content) {
+    showMsgTip("留言内容不能为空哦~", "err");
+    contentEl.focus();
+    return;
+  }
+  showMsgTip("正在提交……", "");
+  fetch(MSG_API + "/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: name, text: content })
+  })
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function () {
+      // 提交成功：清空输入框并刷新留言列表
+      contentEl.value = "";
+      showMsgTip("留言提交成功！", "ok");
+      loadMessages();
+    })
+    .catch(function (err) {
+      showMsgTip("提交失败：" + err.message + "（请确认后端已启动）", "err");
+    });
+});
+
+// 页面打开时自动加载留言
+loadMessages();
+</script>
+</body>
+</html>

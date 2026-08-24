@@ -2244,7 +2244,7 @@ function loadMessages() {
     .catch(function () {
       // 云端不可达（报错/超时/网络不可达）：降级为本地模式
       msgCloudOnline = false;
-      setMsgStatus("offline", "留言区板块国内网络不可用，当前为本地模式");
+      setMsgStatus("offline", "留言板暂时无法连接服务器，你的留言只会保存在本机，其他人看不到");
       renderMessages(readLocalMessages());
     });
 }
@@ -2278,7 +2278,12 @@ document.getElementById("msgSubmit").addEventListener("click", function () {
       loadMessages();
     })
     .catch(function () {
-      // 云端不可达：降级保存到 localStorage
+      // 云端不可达：降级为本地模式。先弹确认框，提示留言仅本机可见
+      if (!confirm("当前网络无法连接留言服务器，留言将只保存在你自己的设备上，别人看不到，确定提交吗？")) {
+        // 用户点“取消”：不提交、不清空输入框
+        showMsgTip("", "");
+        return;
+      }
       var list = readLocalMessages();
       list.unshift({
         name: name,
@@ -2288,9 +2293,9 @@ document.getElementById("msgSubmit").addEventListener("click", function () {
       });
       writeLocalMessages(list);
       msgCloudOnline = false;
-      setMsgStatus("offline", "留言区板块国内网络不可用，当前为本地模式");
+      setMsgStatus("offline", "留言板暂时无法连接服务器，你的留言只会保存在本机，其他人看不到");
       contentEl.value = "";
-      showMsgTip("云端不可用，留言已保存到本地（本地模式）", "ok");
+      showMsgTip("留言已保存到本机（仅自己可见）", "ok");
       renderMessages(readLocalMessages());
     });
 });
